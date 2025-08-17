@@ -1,0 +1,61 @@
+name: Vulnerability & CodeQL Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  vulnerability-codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    # Step 1: Run Grype on repo and save as JSON
+    - name: Run Grype scan
+      uses: anchore/scan-action@v3
+      with:
+        path: .
+        fail-build: false
+        output-format: json
+        only-fixed: false
+        output-file: grype-output.json
+
+    # Step 2: Generate the CodeQL query from grype-output.json
+    - name: Use Node.js to generate CodeQL query from Grype results
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies for script (if any)
+      run: npm install
+      working-directory: ./scripts
+
+    - name: Generate CodeQL query
+      run: node scripts/generate_codeql_from_grype.js
+
+    # Step 3: Set up CodeQL analysis and run custom query
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        queries: ./queries/CheckVulnerablePkgs.ql
+
+    # Optionally: Upload CodeQL results as artifacts or summary
+    - name: Upload results
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeql-results
+        path: /home/runner/work/_temp/codeql-runner/codeql-results.sarif
