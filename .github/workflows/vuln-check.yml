@@ -2,9 +2,9 @@ name: Vulnerability & CodeQL Check
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -17,62 +17,49 @@ jobs:
       security-events: write
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run the latest Grype vulnerability scan
-      - name: Download & run Grype scan
+      # Step 1: Download and run Grype to generate vulnerability JSON
+      - name: Download and run Grype scan
         run: |
           GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
           echo "Using Grype version: $GRYPE_VERSION"
-          curl -sSfL https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz -o grype.tar.gz
+          curl -sSfL "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz" -o grype.tar.gz
           tar -xzf grype.tar.gz
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Set up Node.js and generate CodeQL query from Grype output
+      # Step 2: Set up Node.js and generate CodeQL query based on Grype JSON
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install npm dependencies (if any)
+      - name: Install npm dependencies for script
         run: npm install
         working-directory: ./scripts
-
       - name: Generate CodeQL query
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 3: Download and setup CodeQL CLI
-      - name: Download CodeQL CLI
-        run: |
-          wget https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.tar.gz
-          tar -xzf codeql-linux64.tar.gz
-          chmod +x codeql/codeql
-          sudo mv codeql/codeql /usr/local/bin/
+      # Step 3: Initialize CodeQL (download CLI, create DB automatically)
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
 
-      # Step 4: Create JavaScript CodeQL database
-      - name: Create CodeQL database
-        run: codeql database create js-db --language=javascript --source-root=.
+      # Step 4: Perform CodeQL analysis with your custom query suite
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          query-suite: queries/CheckVulnerablePkgs.ql
 
-      # Step 5: Run CodeQL queries on the database
-      - name: Run CodeQL query suite
-        run: codeql query run queries/CheckVulnerablePkgs.ql --database=js-db --format=sarifv2.1.0 --output=codeql-results.sarif
+      # Step 5: List SARIF files generated for verification
+      - name: List SARIF files
+        run: find . -name '*.sarif'
 
-      # Step 6: Show brief summary of CodeQL results (optional)
-      - name: Show CodeQL results summary
-        run: |
-          if [ -f codeql-results.sarif ]; then
-            echo "CodeQL SARIF results found, displaying summary:"
-            grep '"message":' codeql-results.sarif | head -40
-          else
-            echo "No SARIF results file found!"
-            exit 1
-          fi
-
-      # Step 7: Upload SARIF artifact for review in Actions UI
-      - name: Upload CodeQL SARIF artifact
+      # Step 6: Upload SARIF artifact for review
+      - name: Upload CodeQL SARIF results
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: codeql-results.sarif
+          path: '**/*.sarif'
