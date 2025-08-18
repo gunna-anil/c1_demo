@@ -1,4 +1,4 @@
-name: Vulnerability & CodeQL Check
+name: Vulnerability & CodeQL Check with JSON Output
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  vuln-codeql:
+  vuln-codeql-json:
     runs-on: ubuntu-latest
 
     permissions:
@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run Grype (JSON output)
+      # Step 1: Download and run Grype to generate JSON output
       - name: Download and run Grype scan
         run: |
           GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
@@ -30,45 +30,60 @@ jobs:
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Setup Node.js and install dependencies
+      # Step 2: Setup Node.js and install script dependencies
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Install npm dependencies for script
         run: npm install
         working-directory: ./scripts
 
-      # Step 3: Generate CodeQL query from Grype JSON
+      # Step 3: Generate CodeQL query from Grype scan
       - name: Generate CodeQL query
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 4: Debug - Show generated query contents
-      - name: Show generated CodeQL query
+      # Debug: Show generated query contents
+      - name: Show CodeQL query
         run: cat queries/CheckVulnerablePkgs.ql
 
-      # Step 5: Initialize CodeQL (auto-download CLI + create DB)
+      # Step 4: Initialize CodeQL env (auto CLI download and DB creation)
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
-      # Step 6: Perform CodeQL analysis with custom queries suite
-      - name: Perform CodeQL analysis
+      # Step 5: Analyze using GitHub CodeQL Action (produces SARIF)
+      - name: Perform CodeQL analysis (SARIF)
         uses: github/codeql-action/analyze@v3
         with:
           query-suite: queries/custom-queries.qls
 
-      # Step 7: Debug - List SARIF files and show a snippet
-      - name: List SARIF files
+      # Debug: list SARIF files & show snippet
+      - name: List SARIF files and head results
         run: |
           find . -name '*.sarif'
           head -40 results/javascript.sarif || true
 
-      # Step 8: Upload SARIF files as artifact
-      - name: Upload CodeQL SARIF results
+      # Step 6: Run CodeQL CLI directly to generate JSON output
+      - name: Run CodeQL query for JSON output
+        run: |
+          mkdir -p results
+          codeql query run queries/custom-queries.qls \
+            --database=codeql_databases/javascript \
+            --format=json \
+            --output=results/codeql-results.json
+
+      # Step 7: Upload SARIF results artifact
+      - name: Upload SARIF artifact
         uses: actions/upload-artifact@v4
         with:
-          name: codeql-results
-          path: '**/*.sarif'
+          name: codeql-sarif-results
+          path: results/*.sarif
+
+      # Step 8: Upload JSON results artifact
+      - name: Upload JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-json-results
+          path: results/codeql-results.json
