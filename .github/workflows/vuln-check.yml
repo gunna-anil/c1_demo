@@ -63,4 +63,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: ./codeql-results/codeql.sarif  # Adjust if your SARIF file is elsewhere
+          path: ./codeql-results/codeql.sarif 
