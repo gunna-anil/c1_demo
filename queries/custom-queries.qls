@@ -1,1 +1,1 @@
-- queries/CheckVulnerablePkgs.ql
+query-suite: queries/custom-queries.qls
