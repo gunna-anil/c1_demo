@@ -64,5 +64,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: |
-            $(find . -name '*.sarif' | head -n 1)    
+          path: ./codeql-sarif/   
