@@ -10,7 +10,6 @@ on:
 jobs:
   vuln-codeql:
     runs-on: ubuntu-latest
-
     permissions:
       actions: read
       contents: read
@@ -30,35 +29,42 @@ jobs:
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Set up Node.js and generate CodeQL query based on Grype JSON
+      # Step 2: Setup Node.js and install script dependencies
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Install npm dependencies for script
         run: npm install
         working-directory: ./scripts
+
+      # Step 3: Generate CodeQL query from Grype output
       - name: Generate CodeQL query
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 3: Initialize CodeQL (download CLI, create DB automatically)
+      # Debug: Show contents of the generated CodeQL query
+      - name: Show generated CodeQL query
+        run: cat queries/CheckVulnerablePkgs.ql
+
+      # Step 4: Initialize CodeQL environment
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
-      # Step 4: Perform CodeQL analysis with your custom query suite
+      # Step 5: Perform CodeQL analysis using the custom query suite
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
-          query-suite: queries/CheckVulnerablePkgs.ql
+          query-suite: queries/custom-queries.qls
 
-      # Step 5: List SARIF files generated for verification
+      # Debug: List SARIF files to confirm output location
       - name: List SARIF files
         run: find . -name '*.sarif'
 
-      # Step 6: Upload SARIF artifact for review
-      - name: Upload CodeQL SARIF results
+      # Step 6: Upload SARIF artifacts for review
+      - name: Upload CodeQL SARIF artifacts
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
