@@ -57,7 +57,7 @@ jobs:
 
       # Step 5: Run CodeQL queries on the database
       - name: Run CodeQL query suite
-        run: codeql query run queries/custom-queries.qls --database=js-db --format=sarifv2.1.0 --output=codeql-results.sarif
+        run: codeql query run queries/CheckVulnerablePkgs.ql --database=js-db --format=sarifv2.1.0 --output=codeql-results.sarif
 
       # Step 6: Show brief summary of CodeQL results (optional)
       - name: Show CodeQL results summary
