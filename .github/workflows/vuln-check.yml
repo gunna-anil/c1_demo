@@ -64,7 +64,7 @@ jobs:
           mkdir -p results
           ./codeql/codeql query run queries/custom-queries.qls \
             --database=codeql_databases/javascript \
-            --format=sarifv2.1.0 \
+            --format=sarif \
             --output=results/codeql-results.sarif
 
       - name: Copy SARIF to JSON extension for downstream tools
@@ -81,3 +81,4 @@ jobs:
         with:
           name: codeql-json-results
           path: results/codeql-results.json
+
