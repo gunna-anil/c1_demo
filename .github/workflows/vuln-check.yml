@@ -2,9 +2,9 @@ name: Vulnerability & CodeQL Check
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -48,20 +48,19 @@ jobs:
         with:
           languages: javascript
 
-      # Step 4: Run CodeQL analysis with generated query
+      # Step 4: Run CodeQL analysis using suite
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          query: ./queries/CheckVulnerablePkgs.ql
+          query-suite: queries/custom-queries.qls   # <--- THIS IS THE KEY CHANGE
 
       # Step 5: Debug - List SARIF files created
       - name: List SARIF files
         run: find . -name '*.sarif'
 
-      # Step 6: Upload SARIF artifact if found
+      # Step 6: Upload SARIF artifact
       - name: Upload CodeQL results artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: ./codeql-sarif/   
+          path: ./results/javascript.sarif
