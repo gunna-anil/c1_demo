@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run Grype to generate vulnerability JSON
+      # Step 1: Download and run Grype for vulnerability scan
       - name: Download and run Grype scan
         run: |
           GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
@@ -30,7 +30,7 @@ jobs:
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Set up Node.js and generate CodeQL query from Grype output
+      # Step 2: Set up Node.js and generate CodeQL query
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -41,31 +41,38 @@ jobs:
       - name: Generate CodeQL query
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 3: Show generated CodeQL query for debugging
+      # Debug: Show generated CodeQL query for validation
       - name: Show CodeQL query
         run: cat queries/CheckVulnerablePkgs.ql
 
-      # Step 4: Initialize CodeQL (creates DB, CLI available in action, but NOT in PATH!)
+      # Step 3: Initialize CodeQL (creates DB, CLI in action--not PATH)
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
-      # Step 5: Analyze using CodeQL official action (SARIF output)
+      # Step 4: Standard SARIF analysis
       - name: Perform CodeQL analysis (SARIF)
         uses: github/codeql-action/analyze@v3
         with:
           query-suite: queries/custom-queries.qls
 
-      # Step 6: Download CodeQL CLI manually for JSON output (must use a released version!)
+      # Debug: List SARIF files and show snippet (optional)
+      - name: List SARIF files and show content
+        run: |
+          find . -name '*.sarif'
+          head -40 results/javascript.sarif || true
+
+      # Step 5: Download the latest CodeQL CLI (.zip) for manual JSON output
       - name: Download CodeQL CLI
         run: |
-          CODEQL_VERSION="v2.16.2"
-          wget https://github.com/github/codeql-cli-binaries/releases/download/${CODEQL_VERSION}/codeql-linux64.tar.gz
-          tar -xzf codeql-linux64.tar.gz
+          LATEST_CODEQL_VERSION=$(curl -s https://api.github.com/repos/github/codeql-cli-binaries/releases/latest | grep tag_name | cut -d '"' -f4)
+          echo "Latest CodeQL version: $LATEST_CODEQL_VERSION"
+          wget https://github.com/github/codeql-cli-binaries/releases/download/${LATEST_CODEQL_VERSION}/codeql-linux64.zip
+          unzip codeql-linux64.zip
           echo "$PWD/codeql" >> $GITHUB_PATH
 
-      # Step 7: Run manual CodeQL query to produce JSON output
+      # Step 6: Run CodeQL query for JSON output
       - name: Run CodeQL query for JSON output
         run: |
           mkdir -p results
@@ -74,14 +81,14 @@ jobs:
             --format=json \
             --output=results/codeql-results.json
 
-      # Step 8: Upload SARIF artifact for review
+      # Step 7: Upload SARIF results
       - name: Upload SARIF artifact
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif-results
           path: results/*.sarif
 
-      # Step 9: Upload JSON artifact for review
+      # Step 8: Upload JSON results
       - name: Upload JSON artifact
         uses: actions/upload-artifact@v4
         with:
