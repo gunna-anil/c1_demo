@@ -54,13 +54,15 @@ jobs:
         with:
           query: ./queries/CheckVulnerablePkgs.ql
 
-      # Step 5: Optional - List SARIF files to verify
+      # Step 5: Debug - List SARIF files created
       - name: List SARIF files
         run: find . -name '*.sarif'
 
-      # Step 6: Upload CodeQL results as artifact
+      # Step 6: Upload SARIF artifact if found
       - name: Upload CodeQL results artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: ./codeql-results/codeql.sarif 
+          path: |
+            $(find . -name '*.sarif' | head -n 1)    
