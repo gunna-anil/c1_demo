@@ -53,9 +53,9 @@ jobs:
       with:
         queries: ./queries/CheckVulnerablePkgs.ql
 
-    # Optionally: Upload CodeQL results as artifacts or summary
     - name: Upload results
       uses: actions/upload-artifact@v4
       with:
         name: codeql-results
-        path: /home/runner/work/_temp/codeql-runner/codeql-results.sarif
+        path: '**/*.sarif'
+
