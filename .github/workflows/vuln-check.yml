@@ -45,12 +45,11 @@ jobs:
       - name: List CodeQL queries
         run: ls -l queries/ && head -40 queries/*.ql
 
-      # Step 6: Initialize CodeQL (custom query path)
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+     # Step 6: Run all queries in queries/ with analyze action (SARIF)
+      - name: Perform CodeQL analysis (SARIF)
+        uses: github/codeql-action/analyze@v3
         with:
-          languages: javascript
-          queries: ./queries/CheckVulnerablePkgs.ql
+          queries: codelql run queries/CheckVulnerablePkgs.ql
 
       # Step 7: Perform CodeQL analysis
       - name: Perform CodeQL analysis
