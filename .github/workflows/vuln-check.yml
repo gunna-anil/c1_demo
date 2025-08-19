@@ -1,4 +1,4 @@
-name: Vulnerability & CodeQL Check
+name: Vulnerability & CodeQL Only Output
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  vuln-codeql:
+  codeql-only-json:
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -19,17 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run Grype scan
-      - name: Download and run Grype scan
-        run: |
-          GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
-          echo "Using Grype version: $GRYPE_VERSION"
-          curl -sSfL "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz" -o grype.tar.gz
-          tar -xzf grype.tar.gz
-          chmod +x grype
-          ./grype . -o json > grype-output.json
-
-      # Step 2: Setup Node.js & install dependencies for scripts
+      # Node setup and CodeQL query steps as before
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -37,39 +27,31 @@ jobs:
       - name: Install dependencies for scripts
         run: npm install
         working-directory: ./scripts
-
-      # Step 3: Generate CodeQL query from Grype
       - name: Generate CodeQL query from Grype
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 4: List queries for confirmation
-      - name: List all CodeQL queries
-        run: ls -l queries/ && cat queries/*.ql
+      - name: List CodeQL queries
+        run: ls -l queries/ && head -20 queries/*.ql
 
-      # Step 5: Initialize CodeQL 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
-          queries: ./queries/CheckVulnerablePkgs.ql 
+          queries: ./queries/CheckVulnerablePkgs.ql
 
-      # Step 6: Perform CodeQL analysis
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
 
-      # Step 7: Rename SARIF files to JSON (optional - SARIF is JSON)
-      - name: Rename SARIF files to JSON
+      # Rename just CodeQL SARIF results to .json
+      - name: Rename CodeQL SARIF to JSON
         run: |
-          find . -name '*.sarif' -exec bash -c 'mv "$0" "${0%.sarif}.json"' {} \;
+          CODEQL_SARIF="$(find . -type f -name '*.sarif' | grep results/ | head -1)"
+          echo "Renaming $CODEQL_SARIF to codeql-output.json"
+          mv "$CODEQL_SARIF" codeql-output.json
 
-      # Step 8: List JSON files for preview
-      - name: List JSON files and preview
-        run: |
-          find . -name '*.json' -exec head -40 {} \; || true
-
-      # Step 9: Upload CodeQL JSON artifact
-      - name: Upload CodeQL JSON artifact
+      # Upload ONLY codeql-output.json
+      - name: Upload CodeQL JSON result
         uses: actions/upload-artifact@v4
         with:
-          name: codeql-json-results
-          path: '**/*.json'
+          name: codeql-json-output
+          path: codeql-output.json
