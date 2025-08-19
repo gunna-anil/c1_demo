@@ -1,9 +1,9 @@
 /**
  * @id js/vulnerable-pkgs
- * @name Check vulnerable packages from Grype in package.json
- * @description Auto-generated query from grype-output.json
+ * @title Detect Vulnerable Packages
+ * @description Finds usage of vulnerable JavaScript packages based on Grype scan
  * @kind problem
- * @problem.severity warning
+ * @problem.severity error
  */
 import javascript
 
