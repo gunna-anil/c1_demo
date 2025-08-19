@@ -1,4 +1,5 @@
 /**
+ * @id js/vulnerable-pkgs
  * @name Check vulnerable packages from Grype in package.json
  * @description Auto-generated query from grype-output.json
  * @kind problem
