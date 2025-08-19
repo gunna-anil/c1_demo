@@ -47,13 +47,13 @@ jobs:
       - name: Show CodeQL query
         run: cat queries/CheckVulnerablePkgs.ql
 
-      # Step 3: Initialize CodeQL (downloads CLI, creates DB)
+      # Step 3: Initialize CodeQL 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
-      # Step 4: Run CodeQL analysis (produces SARIF)
+      # Step 4: Run CodeQL analysis 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
