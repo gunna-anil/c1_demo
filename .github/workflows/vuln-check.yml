@@ -23,9 +23,7 @@ jobs:
       # Step 1: Download and run Grype (JSON output)
       - name: Download and run Grype (JSON)
         run: |
-          # Use official Grype install script to get latest version
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b . latest
-          # Run grype scan on the repo and output results as JSON
           ./grype . -o json > grype-output.json
 
       # Step 2: Set up Node.js for generating CodeQL query from Grype JSON
@@ -43,17 +41,16 @@ jobs:
       - name: Generate CodeQL query
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 5: Initialize CodeQL
+      # Step 5: Initialize CodeQL with custom query
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
+          queries: ./queries/CheckVulnerablePkgs.ql
 
-      # Step 6: Perform CodeQL Analysis using the generated query
+      # Step 6: Perform CodeQL Analysis without specifying queries
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-        with:
-          queries: ./queries/CheckVulnerablePkgs.ql
 
       # Step 7: List SARIF output files for debugging
       - name: List SARIF files
