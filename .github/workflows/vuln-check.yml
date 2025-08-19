@@ -1,4 +1,4 @@
-name: Vulnerability & CodeQL Check
+name: Vulnerability & CodeQL
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
 jobs:
   vuln-codeql:
     runs-on: ubuntu-latest
-
     permissions:
       actions: read
       contents: read
@@ -20,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run Grype for vulnerability scanning
+      # Step 1: Run Grype scan and output JSON results
       - name: Download and run Grype scan
         run: |
           GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
@@ -30,40 +29,38 @@ jobs:
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Setup Node.js & generate CodeQL query
+      # Step 2: Set up Node.js and generate CodeQL query
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Install npm dependencies for scripts
         run: npm install
         working-directory: ./scripts
-
-      - name: Generate CodeQL query
+      - name: Generate CodeQL query from Grype output
         run: node scripts/generate_codeql_from_grype.js
 
-      # Debug: Show generated CodeQL query
-      - name: Show CodeQL query
+      # Debug: Show generated CodeQL query for verification
+      - name: Show generated CodeQL query
         run: cat queries/CheckVulnerablePkgs.ql
 
-      # Step 3: Initialize CodeQL 
+      # Step 3: Initialize CodeQL
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
-      # Step 4: Run CodeQL analysis 
-      - name: Perform CodeQL analysis
+      # Step 4: Run all CodeQL queries in queries/ folder, results are SARIF
+      - name: Perform CodeQL analysis (SARIF)
         uses: github/codeql-action/analyze@v3
         with:
-          query: queries/CheckVulnerablePkgs.ql
+          queries: queries/
 
       # Debug: List SARIF files for verification
       - name: List SARIF files
         run: find . -name '*.sarif'
 
-      # Step 5: Upload SARIF artifact
+      # Step 5: Upload SARIF artifact(s)
       - name: Upload CodeQL SARIF artifact
         uses: actions/upload-artifact@v4
         with:
