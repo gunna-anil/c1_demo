@@ -10,13 +10,16 @@ on:
 jobs:
   vuln-codeql:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
     steps:
-      # Step 0: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run Grype scan (output JSON)
+      # Step 1: Download and run Grype scan
       - name: Download and run Grype scan
         run: |
           GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
@@ -26,50 +29,47 @@ jobs:
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Set up Node.js for script execution
+      # Step 2: Setup Node.js & install dependencies for scripts
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      # Step 3: Install Node.js dependencies for scripts
       - name: Install dependencies for scripts
         run: npm install
         working-directory: ./scripts
 
-      # Step 4: Generate CodeQL query from Grype
+      # Step 3: Generate CodeQL query from Grype
       - name: Generate CodeQL query from Grype
         run: node scripts/generate_codeql_from_grype.js
 
-      # Step 5: List queries for confirmation (optional)
-      - name: List CodeQL queries
-        run: ls -l queries/ && head -40 queries/*.ql
+      # Step 4: List queries for confirmation
+      - name: List all CodeQL queries
+        run: ls -l queries/ && cat queries/*.ql
 
-     # Step 6: Run all queries in queries/ with analyze action (SARIF)
-      - name: Perform CodeQL analysis (SARIF)
-        uses: github/codeql-action/analyze@v3
+      # Step 5: Initialize CodeQL 
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
-          queries: codelql run queries/CheckVulnerablePkgs.ql
+          languages: javascript
+          queries: ./queries/CheckVulnerablePkgs.ql 
 
-      # Step 7: Perform CodeQL analysis
+      # Step 6: Perform CodeQL analysis
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
 
-      # Step 8: Rename SARIF files to .json for easy downstream JSON consumption (optional)
+      # Step 7: Rename SARIF files to JSON (optional - SARIF is JSON)
       - name: Rename SARIF files to JSON
         run: |
           find . -name '*.sarif' -exec bash -c 'mv "$0" "${0%.sarif}.json"' {} \;
 
-      # Step 9: Upload CodeQL JSON results
-      - name: Upload CodeQL JSON results
+      # Step 8: List JSON files for preview
+      - name: List JSON files and preview
+        run: |
+          find . -name '*.json' -exec head -40 {} \; || true
+
+      # Step 9: Upload CodeQL JSON artifact
+      - name: Upload CodeQL JSON artifact
         uses: actions/upload-artifact@v4
         with:
           name: codeql-json-results
           path: '**/*.json'
-
-      # Step 10: Upload Grype JSON results
-      - name: Upload Grype JSON results
-        uses: actions/upload-artifact@v4
-        with:
-          name: grype-json-results
-          path: grype-output.json
