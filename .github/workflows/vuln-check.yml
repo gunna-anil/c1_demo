@@ -1,4 +1,4 @@
-name: Vulnerability & CodeQL Check (SARIF only)
+name: Vulnerability & CodeQL Check
 
 on:
   push:
