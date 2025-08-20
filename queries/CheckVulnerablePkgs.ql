@@ -5,12 +5,6 @@
  * @kind problem
  * @problem.severity warning
  */
-import javascript
-
-predicate isVulnerableFromGrype(string pkg) {
-  pkg = "axios"
-}
-...
 
 import javascript
 
