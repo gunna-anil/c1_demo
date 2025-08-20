@@ -1,4 +1,4 @@
-name: Vulnerability & CodeQL Only Output
+name: Vulnerability & CodeQL Check
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  codeql-only-json:
+  codeql-analysis:
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -19,49 +19,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Node setup and CodeQL query steps as before
+      # Optional: If you need to generate custom CodeQL query from a script
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies for scripts
+
+      - name: Install script dependencies
         run: npm install
         working-directory: ./scripts
+
       - name: Generate CodeQL query from Grype
         run: node scripts/generate_codeql_from_grype.js
 
       - name: List CodeQL queries
         run: ls -l queries/ && head -20 queries/*.ql
-      
+
+      # CodeQL Initialization (add custom query, runs default suite as well)
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
           queries: ./queries/CheckVulnerablePkgs.ql
-      
-      - name: Perform CodeQL analysis
+
+      - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-      
-      - name: Check SARIF file size and contents
+        with:
+          languages: javascript
+          queries: ./queries/CheckVulnerablePkgs.ql
+
+      # SARIF Preview for Debugging
+      - name: Preview SARIF contents in workflow log
         run: |
           SARIF_FILE=$(find . -type f -name '*.sarif' | grep results/ | head -1)
-          echo "SARIF file path: $SARIF_FILE"
-          if [ -s "$SARIF_FILE" ]; then
-            echo "SARIF file is not empty. Here are the first 100 lines:"
+          echo "SARIF_FILE found: $SARIF_FILE"
+          if [ -f "$SARIF_FILE" ]; then
             head -100 "$SARIF_FILE"
           else
-            echo "SARIF file is empty."
+            echo "SARIF file not found!"
             exit 1
           fi
-      
+
+      # Only output the CodeQL analysis result as JSON
       - name: Rename SARIF to JSON
         run: |
           SARIF_FILE=$(find . -type f -name '*.sarif' | grep results/ | head -1)
           mv "$SARIF_FILE" codeql-output.json
-      
+
       - name: Upload CodeQL JSON result
         uses: actions/upload-artifact@v4
         with:
           name: codeql-json-output
           path: codeql-output.json
-
