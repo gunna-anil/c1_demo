@@ -1,4 +1,4 @@
-name: Vulnerability & CodeQL Automated Grype-Ingest Check
+name: Vulnerability & CodeQL Query Automation
 
 on:
   push:
@@ -10,12 +10,12 @@ on:
 jobs:
   vuln-codeql:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and run Grype scan (save output as JSON)
+      # Grype Scan
       - name: Download and run Grype scan
         run: |
           GRYPE_VERSION=$(curl -s https://api.github.com/repos/anchore/grype/releases/latest | grep tag_name | cut -d '"' -f4)
@@ -25,39 +25,40 @@ jobs:
           chmod +x grype
           ./grype . -o json > grype-output.json
 
-      # Step 2: Setup Node.js (for custom automation scripts)
+      # Node.js for automation scripts
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # Step 3: Install dependencies for codeql script
+      # Install script dependencies
       - name: Install script dependencies
         run: npm install
         working-directory: ./scripts
 
-      # Step 4: Generate CodeQL query from Grype output 
-      - name: Generate CodeQL query from Grype
+      # Generate CodeQL Query from Grype output
+      - name: Generate CodeQL query from Grype results
         run: node scripts/generate_codeql_from_grype.js
-        # This script reads grype-output.json, generates queries/CheckVulnerablePkgs.ql
+        # Expects grype-output.json in repo root
+        # Outputs queries/CheckVulnerablePkgs.ql
 
-      # Step 5: List the generated query for confirmation/diagnostics
-      - name: Preview generated CodeQL query
-        run: head -40 queries/CheckVulnerablePkgs.ql
+      # Show generated query (debug)
+      - name: Show generated CodeQL query
+        run: head -20 queries/CheckVulnerablePkgs.ql
 
-      # Step 6: Initialize CodeQL with the generated query
+      # CodeQL: Initialize database (points to generated query)
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
           queries: ./queries/CheckVulnerablePkgs.ql
 
-      # Step 7: Run CodeQL analysis with generated query
-      - name: Perform CodeQL Analysis
+      # CodeQL analysis
+      - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
 
-      # Step 8: Move SARIF result to desired output location and rename to .json
-      - name: Move/rename CodeQL SARIF output
+      # Move SARIF to desired output and rename to .json
+      - name: Move SARIF results to output folder as JSON
         run: |
           mkdir -p codeql-json-output
           SARIF_FILE=$(find . -type f -name '*.sarif' | grep results/ | head -1)
@@ -68,8 +69,8 @@ jobs:
             exit 1
           fi
 
-      # Step 9: Upload only the CodeQL output JSON file
-      - name: Upload CodeQL JSON output
+      # Upload only the CodeQL output as JSON
+      - name: Upload CodeQL JSON results
         uses: actions/upload-artifact@v4
         with:
           name: codeql-output-json
