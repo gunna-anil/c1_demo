@@ -10,10 +10,6 @@ on:
 jobs:
   vuln-codeql:
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
 
     steps:
       - name: Checkout repository
@@ -35,12 +31,12 @@ jobs:
         with:
           node-version: '20'
 
-      # Step 3: Install dependencies for codegen script
+      # Step 3: Install dependencies for codeql script
       - name: Install script dependencies
         run: npm install
         working-directory: ./scripts
 
-      # Step 4: Generate CodeQL query from Grype output (automated query build)
+      # Step 4: Generate CodeQL query from Grype output 
       - name: Generate CodeQL query from Grype
         run: node scripts/generate_codeql_from_grype.js
         # This script reads grype-output.json, generates queries/CheckVulnerablePkgs.ql
@@ -49,7 +45,7 @@ jobs:
       - name: Preview generated CodeQL query
         run: head -40 queries/CheckVulnerablePkgs.ql
 
-      # Step 6: Initialize CodeQL with the **generated query**
+      # Step 6: Initialize CodeQL with the generated query
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
