@@ -28,7 +28,8 @@ predicateLines.push('}');
 
 // Build the QL query
 const qlQuery = `/**
- * @name Check vulnerable packages from Grype in package.json
+ * @id js/grype-vulnerable-pkgs
+ * @title Check vulnerable packages from Grype in package.json
  * @description Auto-generated query from ${GRYPE_JSON}
  * @kind problem
  * @problem.severity warning
