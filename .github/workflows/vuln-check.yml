@@ -35,13 +35,11 @@ jobs:
         with:
           node-version: '20'
 
-      # Install script dependencies
       - name: Install script dependencies
         run: npm install
         working-directory: ./scripts
 
-      # Generate CodeQL Query from Grype output
-      - name: Generate CodeQL query from Grype results
+      - name: Generate CodeQL query from Grype output
         run: node scripts/generate_codeql_from_grype.js
 
       # Download CodeQL CLI
@@ -49,7 +47,11 @@ jobs:
         run: |
           wget https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.zip
           unzip codeql-linux64.zip
-          echo "$PWD/codeql" >> $GITHUB_PATH
+
+      # Install CodeQL query pack dependencies
+      - name: Install CodeQL Pack Dependencies
+        run: |
+          ./codeql/codeql pack install queries
 
       # Create CodeQL database
       - name: Create CodeQL database
@@ -61,9 +63,10 @@ jobs:
         run: |
           ./codeql/codeql query run queries/CheckVulnerablePkgs.ql --database=db --output=result.bqrs
 
-      # Convert .bqrs to JSON
+      # Convert BQRS to JSON
       - name: Convert BQRS to JSON
         run: |
+          mkdir -p codeql-json-output
           ./codeql/codeql bqrs decode result.bqrs --format=json > codeql-json-output/codeql-output.json
 
       # Upload only the CodeQL output as JSON
