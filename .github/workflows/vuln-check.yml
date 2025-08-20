@@ -10,10 +10,6 @@ on:
 jobs:
   vuln-codeql-cli:
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
 
     steps:
       - name: Checkout repository
@@ -58,7 +54,7 @@ jobs:
         run: |
           ./codeql/codeql database create db --language=javascript --source-root=.
 
-      # Run CodeQL Query (produces .bqrs result)
+      # Run CodeQL Query 
       - name: Run CodeQL Query
         run: |
           ./codeql/codeql query run queries/CheckVulnerablePkgs.ql --database=db --output=result.bqrs
