@@ -1,9 +1,17 @@
 /**
- * @name Check vulnerable packages from Grype in package.json
+ * @id js/grype-vulnerable-pkgs
+ * @title Check vulnerable packages from Grype in package.json
  * @description Auto-generated query from grype-output.json
  * @kind problem
  * @problem.severity warning
  */
+import javascript
+
+predicate isVulnerableFromGrype(string pkg) {
+  pkg = "axios"
+}
+...
+
 import javascript
 
 predicate isVulnerableFromGrype(string pkg) {
