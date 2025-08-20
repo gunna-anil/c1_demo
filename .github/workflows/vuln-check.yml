@@ -8,15 +8,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  vuln-codeql:
+  vuln-codeql-cli:
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
-  
 
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,35 +43,28 @@ jobs:
       # Generate CodeQL Query from Grype output
       - name: Generate CodeQL query from Grype results
         run: node scripts/generate_codeql_from_grype.js
-        # Expects grype-output.json in repo root
-        # Outputs queries/CheckVulnerablePkgs.ql
 
-      # Show generated query (debug)
-      - name: Show generated CodeQL query
-        run: head -20 queries/CheckVulnerablePkgs.ql
-
-      # CodeQL: Initialize database (points to generated query)
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-          queries: ./queries/CheckVulnerablePkgs.ql
-
-      # CodeQL analysis
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v3
-
-      # Move SARIF to desired output and rename to .json
-      - name: Move SARIF results to output folder as JSON
+      # Download CodeQL CLI
+      - name: Download CodeQL CLI
         run: |
-          mkdir -p codeql-json-output
-          SARIF_FILE=$(find . -type f -name '*.sarif' | grep results/ | head -1)
-          if [ -f "$SARIF_FILE" ]; then
-            mv "$SARIF_FILE" codeql-json-output/codeql-output.json
-          else
-            echo "SARIF output not found!"
-            exit 1
-          fi
+          wget https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.zip
+          unzip codeql-linux64.zip
+          echo "$PWD/codeql" >> $GITHUB_PATH
+
+      # Create CodeQL database
+      - name: Create CodeQL database
+        run: |
+          ./codeql/codeql database create db --language=javascript --source-root=.
+
+      # Run CodeQL Query (produces .bqrs result)
+      - name: Run CodeQL Query
+        run: |
+          ./codeql/codeql query run queries/CheckVulnerablePkgs.ql --database=db --output=result.bqrs
+
+      # Convert .bqrs to JSON
+      - name: Convert BQRS to JSON
+        run: |
+          ./codeql/codeql bqrs decode result.bqrs --format=json > codeql-json-output/codeql-output.json
 
       # Upload only the CodeQL output as JSON
       - name: Upload CodeQL JSON results
