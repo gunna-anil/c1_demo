@@ -57,7 +57,7 @@ jobs:
       # Run CodeQL Query 
       - name: Run CodeQL Query
         run: |
-          ./codeql/codeql query run queries/CheckVulnerablePkgs.ql --database=db --output=result.bqrs
+          ./codeql/codeql query run queries/C1.ql --database=db --output=result.bqrs
 
       # Convert BQRS to JSON
       - name: Convert BQRS to JSON
