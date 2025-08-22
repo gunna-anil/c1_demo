@@ -35,9 +35,6 @@ jobs:
         run: npm install
         working-directory: ./scripts
 
-      - name: Generate CodeQL query from Grype output
-        run: node scripts/generate_codeql_from_grype.js
-
       # Download CodeQL CLI
       - name: Download CodeQL CLI
         run: |
