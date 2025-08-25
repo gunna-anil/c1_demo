@@ -15,5 +15,4 @@ where
   deps.getADependency(name, version) and
   searchForComponentPresence(name)
 select
-  name + "@" + version,
   "Package " + name + "@" + version + " is present in package.json."
